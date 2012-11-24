@@ -1,3 +1,7 @@
+require File.dirname(__FILE__) + '/lib/abingo'
+require File.dirname(__FILE__) + '/generators/abingo_migration/abingo_migration_generator.rb'
+ActionController::Base.send :include, AbingoSugar
+ActionView::Base.send :include, AbingoViewHelper
 #This class is outside code's main interface into the ABingo A/B testing framework.
 #Unless you're fiddling with implementation details, it is the only one you need worry about.
 
@@ -78,7 +82,7 @@ class Abingo
     unless short_circuit.nil?
       return short_circuit  #Test has been stopped, pick canonical alternative.
     end
-    
+
     unless Abingo::Experiment.exists?(test_name)
       lock_key = "Abingo::lock_for_creation(#{test_name.gsub(" ", "_")})"
       creation_required = true
@@ -102,7 +106,7 @@ class Abingo
 
     choice = self.find_alternative_for_user(test_name, alternatives)
     participating_tests = Abingo.cache.read("Abingo::participating_tests::#{Abingo.identity}") || []
-    
+
     #Set this user to participate in this experiment, and increment participants count.
     if options[:multiple_participation] || !(participating_tests.include?(test_name))
       unless participating_tests.include?(test_name)
@@ -201,7 +205,7 @@ class Abingo
       if (@@options[:expires_in_for_bots] && !participating_tests.blank?)
         Abingo.cache.write("Abingo::participating_tests::#{Abingo.identity}", participating_tests, {:expires_in => Abingo.expires_in(true)})
       end
-      
+
       participating_tests.each do |test_name|
         Alternative.score_participation(test_name)
         if conversions = Abingo.cache.read("Abingo::conversions(#{Abingo.identity},#{test_name}")
@@ -225,7 +229,7 @@ class Abingo
   #   Integer => a number 1 through N
   #   Range   => a number within the range
   #   Array   => an element of the array.
-  #   Hash    => assumes a hash of something to int.  We pick one of the 
+  #   Hash    => assumes a hash of something to int.  We pick one of the
   #              somethings, weighted accorded to the ints provided.  e.g.
   #              {:a => 2, :b => 3} produces :a 40% of the time, :b 60%.
   #
