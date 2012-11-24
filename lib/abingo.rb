@@ -14,13 +14,6 @@ ActionView::Base.send :include, AbingoViewHelper
 #Usage of ABingo, including practical hints, is covered at http://www.bingocardcreator.com/abingo
 
 class Abingo
-
-  @@VERSION = "1.1.0"
-  @@MAJOR_VERSION = "1.1"
-  cattr_reader :VERSION
-  cattr_reader :MAJOR_VERSION
-
-  #Not strictly necessary, but eh, as long as I'm here.
   cattr_accessor :salt
   @@salt = "Not really necessary."
 
@@ -47,10 +40,13 @@ class Abingo
   #
   #You can overwrite Abingo's cache instance, if you would like it to not share
   #your generic Rails cache.
-  cattr_writer :cache
 
   def self.cache
-    @@cache || Rails.cache
+    @cache || Rails.cache
+  end
+
+  def self.cache=(cache)
+    @cache = cache
   end
 
   #This method gives a unique identity to a user.  It can be absolutely anything

@@ -1,3 +1,4 @@
+require "active_record"
 require "abingo/conversion_rate"
 class Abingo::Alternative < ActiveRecord::Base
   include Abingo::ConversionRate
