@@ -131,7 +131,7 @@ class AbingoTest < Test::Unit::TestCase
     5.times do
       threads << Thread.new do
         Abingo.test(test_name, alternatives, :conversion => conversion_name)
-        1
+        ActiveRecord::Base.connection.close
       end
     end
     threads.each(&:join)
