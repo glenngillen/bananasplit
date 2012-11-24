@@ -7,7 +7,7 @@ class Abingo
       else
         ActionController::Base.prepend_view_path File.join(File.dirname(__FILE__), "../views")
       end
-      
+
       def index
         @experiments = Abingo::Experiment.all
         render :template => 'dashboard/index'

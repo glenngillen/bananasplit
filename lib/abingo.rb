@@ -1,5 +1,11 @@
-require File.dirname(__FILE__) + '/lib/abingo'
-require File.dirname(__FILE__) + '/generators/abingo_migration/abingo_migration_generator.rb'
+require "abingo/version"
+require "#{File.dirname(__FILE__)}/abingo_sugar"
+require "#{File.dirname(__FILE__)}/abingo_view_helper"
+require "abingo/controller/dashboard"
+require "abingo/rails/controller/dashboard"
+require "abingo/alternative"
+require "abingo/experiment"
+require "#{File.dirname(__FILE__)}/../generators/abingo_migration/abingo_migration_generator.rb"
 ActionController::Base.send :include, AbingoSugar
 ActionView::Base.send :include, AbingoViewHelper
 #This class is outside code's main interface into the ABingo A/B testing framework.

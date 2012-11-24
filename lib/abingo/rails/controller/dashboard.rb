@@ -1,4 +1,4 @@
-module Abingo
+class Abingo
   module Rails
     module Controller
       module Dashboard

@@ -1,3 +1,5 @@
+require "abingo/statistics"
+require "abingo/conversion_rate"
 class Abingo::Experiment < ActiveRecord::Base
   include Abingo::Statistics
   include Abingo::ConversionRate
@@ -13,7 +15,7 @@ class Abingo::Experiment < ActiveRecord::Base
     "Abingo::Experiment::short_circuit(#{test_name})".gsub(" ", "_")
   ]
   end
-  
+
   def cleanup_cache
     cache_keys.each do |key|
       Abingo.cache.delete key
