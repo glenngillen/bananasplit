@@ -44,7 +44,7 @@ class Abingo
   #your generic Rails cache.
 
   def self.cache
-    @cache || Rails.cache
+    @cache || ::Rails.cache
   end
 
   def self.cache=(cache)
