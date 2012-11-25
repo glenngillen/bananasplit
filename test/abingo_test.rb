@@ -138,6 +138,26 @@ class AbingoTest < Test::Unit::TestCase
     assert_equal 1, Abingo::Experiment.count_by_sql(["select count(id) from experiments where test_name = ?", test_name])
   end
 
+  test "proper conversions with concurrency" do
+    test_name = "conversion_concurrency_test"
+    alternatives = %w{foo bar}
+    threads = []
+    alternatives.size.times do |i|
+      threads << Thread.new do
+        Abingo.identity = i
+        Abingo.test(test_name, alternatives)
+        sleep(1) if i == 0
+        Abingo.bingo!(test_name)
+        ActiveRecord::Base.connection.close
+      end
+    end
+    threads.each(&:join)
+    ex = Abingo::Experiment.find_by_test_name(test_name)
+    ex.alternatives.each do |alternative|
+      assert_equal 1, alternative.conversions
+    end
+  end
+
   test "non-humans are ignored for participation and conversions if not explicitly counted" do
     Abingo.options[:count_humans_only] = true
     Abingo.options[:expires_in] = 1.hour
