@@ -5,15 +5,15 @@
 
 module AbingoSugar
 
-  def ab_test(test_name, alternatives = nil, options = {})
+  def ab_test(abingo, test_name, alternatives = nil, options = {})
     if (Abingo.options[:enable_specification] && !params[test_name].nil?)
       choice = params[test_name]
     elsif (Abingo.options[:enable_override_in_session] && !session[test_name].nil?)
       choice = session[test_name]
     elsif (alternatives.nil?)
-      choice = Abingo.flip(test_name)
+      choice = abingo.flip(test_name)
     else
-      choice = Abingo.test(test_name, alternatives, options)
+      choice = abingo.test(test_name, alternatives, options)
     end
 
     if block_given?
@@ -23,19 +23,19 @@ module AbingoSugar
     end
   end
 
-  def bingo!(test_name, options = {})
-    Abingo.bingo!(test_name, options)
+  def bingo!(abingo, test_name, options = {})
+    abingo.bingo!(test_name, options)
   end
 
   #Mark the user as a human.
-  def abingo_mark_human
+  def abingo_mark_human(abingo)
     textual_result = "1"
     begin
       a = params[:a].to_i
       b = params[:b].to_i
       c = params[:c].to_i
       if (request.method == :post && (a + b == c))
-        Abingo.human!
+        abingo.human!
       else
         textual_result = "0"
       end
@@ -43,7 +43,6 @@ module AbingoSugar
       textual_result = "0"
     end
     render :text => textual_result, :layout => false #Not actually used by browser
-
   end
 
 end
