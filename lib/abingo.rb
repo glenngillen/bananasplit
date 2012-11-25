@@ -87,42 +87,39 @@ class Abingo
 
     unless Abingo::Experiment.exists?(test_name)
       lock_key = "Abingo::lock_for_creation(#{test_name.gsub(" ", "_")})"
-      creation_required = true
-
+      lock_id  = SecureRandom.hex
       #this prevents (most) repeated creations of experiments in high concurrency environments.
       if Abingo.cache.exist?(lock_key)
-        creation_required = false
-        while Abingo.cache.exist?(lock_key)
-          sleep(0.1)
+        wait_for_lock_release(lock_key)
+      else
+        Abingo.cache.write(lock_key, lock_id, :expires_in => 5.seconds)
+        sleep(0.1)
+        if Abingo.cache.read(lock_key) == lock_id
+          conversion_name = options[:conversion] || options[:conversion_name]
+          Abingo::Experiment.start_experiment!(test_name, Abingo.parse_alternatives(alternatives), conversion_name)
+        else
+          wait_for_lock_release(lock_key)
         end
-        creation_required = Abingo::Experiment.exists?(test_name)
       end
-
-      if creation_required
-        Abingo.cache.write(lock_key, 1, :expires_in => 5.seconds)
-        conversion_name = options[:conversion] || options[:conversion_name]
-        Abingo::Experiment.start_experiment!(test_name, self.parse_alternatives(alternatives), conversion_name)
-        Abingo.cache.delete(lock_key)
-      end
+      Abingo.cache.delete(lock_key)
     end
 
     choice = self.find_alternative_for_user(test_name, alternatives)
-    participating_tests = Abingo.cache.read("Abingo::participating_tests::#{Abingo.identity}") || []
+    participating_tests = Abingo.cache.read("Abingo::participating_tests::#{self.identity}") || []
 
     #Set this user to participate in this experiment, and increment participants count.
     if options[:multiple_participation] || !(participating_tests.include?(test_name))
       unless participating_tests.include?(test_name)
         participating_tests = participating_tests + [test_name]
-        expires_in = Abingo.expires_in
-        if expires_in
-          Abingo.cache.write("Abingo::participating_tests::#{Abingo.identity}", participating_tests, {:expires_in => expires_in})
+        if self.expires_in
+          Abingo.cache.write("Abingo::participating_tests::#{self.identity}", participating_tests, {:expires_in => self.expires_in})
         else
-          Abingo.cache.write("Abingo::participating_tests::#{Abingo.identity}", participating_tests)
+          Abingo.cache.write("Abingo::participating_tests::#{self.identity}", participating_tests)
         end
       end
       #If we're only counting known humans, then postpone scoring participation until after we know the user is human.
-      if (!@@options[:count_humans_only] || Abingo.is_human?)
-        Abingo::Alternative.score_participation(test_name)
+      if (!@@options[:count_humans_only] || self.is_human?)
+        Abingo::Alternative.score_participation(test_name, choice)
       end
     end
 
@@ -133,6 +130,11 @@ class Abingo
     end
   end
 
+  def self.wait_for_lock_release(lock_key)
+    while Abingo.cache.exist?(lock_key)
+      sleep(0.1)
+    end
+  end
 
   #Scores conversions for tests.
   #test_name_or_array supports three types of input:
@@ -145,7 +147,7 @@ class Abingo
   #An array of either of the above: for each element of the array, process as above.
   #
   #nil: score a conversion for every test the u
-  def Abingo.bingo!(name = nil, options = {})
+  def bingo!(name = nil, options = {})
     if name.kind_of? Array
       name.map do |single_test|
         self.bingo!(single_test, options)
@@ -153,7 +155,7 @@ class Abingo
     else
       if name.nil?
         #Score all participating tests
-        participating_tests = Abingo.cache.read("Abingo::participating_tests::#{Abingo.identity}") || []
+        participating_tests = Abingo.cache.read("Abingo::participating_tests::#{self.identity}") || []
         participating_tests.each do |participating_test|
           self.bingo!(participating_test, options)
         end
@@ -178,39 +180,38 @@ class Abingo
     end
   end
 
-  def self.participating_tests(only_current = true)
-    identity = Abingo.identity
+  def participating_tests(only_current = true)
     participating_tests = Abingo.cache.read("Abingo::participating_tests::#{identity}") || []
     tests_and_alternatives = participating_tests.inject({}) do |acc, test_name|
       alternatives_key = "Abingo::Experiment::#{test_name}::alternatives".gsub(" ","_")
       alternatives = Abingo.cache.read(alternatives_key)
-      acc[test_name] = Abingo.find_alternative_for_user(test_name, alternatives)
+      acc[test_name] = find_alternative_for_user(test_name, alternatives)
       acc
     end
     if (only_current)
       tests_and_alternatives.reject! do |key, value|
-        self.cache.read("Abingo::Experiment::short_circuit(#{key})")
+        Abingo.cache.read("Abingo::Experiment::short_circuit(#{key})")
       end
     end
     tests_and_alternatives
   end
 
   #Marks that this user is human.
-  def self.human!
-    Abingo.cache.fetch("Abingo::is_human(#{Abingo.identity})",  {:expires_in => Abingo.expires_in(true)}) do
+  def human!
+    Abingo.cache.fetch("Abingo::is_human(#{self.identity})",  {:expires_in => self.expires_in(true)}) do
       #Now that we know the user is human, score participation for all their tests.  (Further participation will *not* be lazy evaluated.)
 
       #Score all tests which have been deferred.
-      participating_tests = Abingo.cache.read("Abingo::participating_tests::#{Abingo.identity}") || []
+      participating_tests = Abingo.cache.read("Abingo::participating_tests::#{self.identity}") || []
 
       #Refresh cache expiry for this user to match that of known humans.
       if (@@options[:expires_in_for_bots] && !participating_tests.blank?)
-        Abingo.cache.write("Abingo::participating_tests::#{Abingo.identity}", participating_tests, {:expires_in => Abingo.expires_in(true)})
+        Abingo.cache.write("Abingo::participating_tests::#{self.identity}", participating_tests, {:expires_in => self.expires_in(true)})
       end
 
       participating_tests.each do |test_name|
         Alternative.score_participation(test_name)
-        if conversions = Abingo.cache.read("Abingo::conversions(#{Abingo.identity},#{test_name}")
+        if conversions = Abingo.cache.read("Abingo::conversions(#{self.identity},#{test_name}")
           conversions.times { Alternative.score_conversion(test_name) }
         end
       end
@@ -220,8 +221,8 @@ class Abingo
 
   protected
 
-  def self.is_human?
-    !!Abingo.cache.read("Abingo::is_human(#{Abingo.identity})")
+  def is_human?
+    !!Abingo.cache.read("Abingo::is_human(#{self.identity})")
   end
 
   #For programmer convenience, we allow you to specify what the alternatives for
@@ -260,32 +261,34 @@ class Abingo
 
   def self.retrieve_alternatives(test_name, alternatives)
     cache_key = "Abingo::Experiment::#{test_name}::alternatives".gsub(" ","_")
-    alternative_array = self.cache.fetch(cache_key) do
-      self.parse_alternatives(alternatives)
+    alternative_array = Abingo.cache.fetch(cache_key) do
+      Abingo.parse_alternatives(alternatives)
     end
     alternative_array
   end
 
-  def self.find_alternative_for_user(test_name, alternatives)
-    alternatives_array = retrieve_alternatives(test_name, alternatives)
+  def find_alternative_for_user(test_name, alternatives)
+    alternatives_array = Abingo.retrieve_alternatives(test_name, alternatives)
     alternatives_array[self.modulo_choice(test_name, alternatives_array.size)]
   end
 
   #Quickly determines what alternative to show a given user.  Given a test name
   #and their identity, we hash them together (which, for MD5, provably introduces
   #enough entropy that we don't care) otherwise
-  def self.modulo_choice(test_name, choices_count)
+  def modulo_choice(test_name, choices_count)
     Digest::MD5.hexdigest(Abingo.salt.to_s + test_name + self.identity.to_s).to_i(16) % choices_count
   end
 
-  def self.score_conversion!(test_name)
+  def score_conversion!(test_name)
     test_name.gsub!(" ", "_")
-    participating_tests = Abingo.cache.read("Abingo::participating_tests::#{Abingo.identity}") || []
+    participating_tests = Abingo.cache.read("Abingo::participating_tests::#{self.identity}") || []
     if options[:assume_participation] || participating_tests.include?(test_name)
-      cache_key = "Abingo::conversions(#{Abingo.identity},#{test_name}"
+      cache_key = "Abingo::conversions(#{self.identity},#{test_name}"
       if options[:multiple_conversions] || !Abingo.cache.read(cache_key)
-        if !options[:count_humans_only] || Abingo.is_human?
-          Abingo::Alternative.score_conversion(test_name)
+        if !options[:count_humans_only] || is_human?
+          viewed_alternative = find_alternative_for_user(test_name,
+            Abingo::Experiment.alternatives_for_test(test_name))
+          Abingo::Alternative.score_conversion(test_name, viewed_alternative)
         end
 
         if Abingo.cache.exist?(cache_key)
@@ -297,12 +300,12 @@ class Abingo
     end
   end
 
-  def self.expires_in(known_human = false)
+  def expires_in(known_human = false)
     expires_in = nil
     if (@@options[:expires_in])
       expires_in = @@options[:expires_in]
     end
-    if (@@options[:count_humans_only] && @@options[:expires_in_for_bots] && !(known_human || Abingo.is_human?))
+    if (@@options[:count_humans_only] && @@options[:expires_in_for_bots] && !(known_human || is_human?))
       expires_in = @@options[:expires_in_for_bots]
     end
     expires_in
