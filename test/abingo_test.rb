@@ -13,7 +13,8 @@ class AbingoTest < Test::Unit::TestCase
   end
 
   test "identity automatically assigned" do
-    assert Abingo.identity != nil
+    abingo = Abingo.identify
+    assert abingo.identity != nil
   end
 
   test "alternative parsing" do
@@ -28,31 +29,35 @@ class AbingoTest < Test::Unit::TestCase
     assert_equal 0, Abingo::Experiment.count
     assert_equal 0, Abingo::Alternative.count
     alternatives = %w{A B}
-    alternative_selected = Abingo.test("unit_test_sample_A", alternatives)
+    abingo = Abingo.identify
+    alternative_selected = abingo.test("unit_test_sample_A", alternatives)
     assert_equal 1, Abingo::Experiment.count
     assert_equal 2, Abingo::Alternative.count
     assert alternatives.include?(alternative_selected)
   end
 
   test "exists works right" do
-    Abingo.test("exist works right", %w{does does_not})
+    abingo = Abingo.identify
+    abingo.test("exist works right", %w{does does_not})
     assert Abingo::Experiment.exists?("exist works right")
   end
 
   test "alternatives picked consistently" do
-    alternative_picked = Abingo.test("consistency_test", 1..100)
+    abingo = Abingo.identify
+    alternative_picked = abingo.test("consistency_test", 1..100)
     100.times do
-      assert_equal alternative_picked, Abingo.test("consistency_test", 1..100)
+      assert_equal alternative_picked, abingo.test("consistency_test", 1..100)
     end
   end
 
   test "participation works" do
     new_tests = %w{participationA participationB participationC}
+    abingo = Abingo.identify
     new_tests.map do |test_name|
-      Abingo.test(test_name, 1..5)
+      abingo.test(test_name, 1..5)
     end
 
-    participating_tests = Abingo.cache.read("Abingo::participating_tests::#{Abingo.identity}") || []
+    participating_tests = Abingo.cache.read("Abingo::participating_tests::#{abingo.identity}") || []
 
     new_tests.map do |test_name|
       assert participating_tests.include? test_name
@@ -61,7 +66,8 @@ class AbingoTest < Test::Unit::TestCase
 
   test "participants counted" do
     test_name = "participants_counted_test"
-    alternative = Abingo.test(test_name, %w{a b c})
+    abingo = Abingo.identify
+    alternative = abingo.test(test_name, %w{a b c})
 
     ex = Abingo::Experiment.find_by_test_name(test_name)
     lookup = Abingo::Alternative.calculate_lookup(test_name, alternative)
@@ -72,14 +78,15 @@ class AbingoTest < Test::Unit::TestCase
 
   test "conversion tracking by test name" do
     test_name = "conversion_test_by_name"
-    alternative = Abingo.test(test_name, %w{a b c})
-    Abingo.bingo!(test_name)
+    abingo = Abingo.identify
+    alternative = abingo.test(test_name, %w{a b c})
+    abingo.bingo!(test_name)
     ex = Abingo::Experiment.find_by_test_name(test_name)
     lookup = Abingo::Alternative.calculate_lookup(test_name, alternative)
     chosen_alt = Abingo::Alternative.find_by_lookup(lookup)
     assert_equal 1, ex.conversions
     assert_equal 1, chosen_alt.conversions
-    Abingo.bingo!(test_name)
+    abingo.bingo!(test_name)
 
     #Should still only have one because this conversion should not be double counted.
     #We haven't specified that in the test options.
@@ -87,13 +94,14 @@ class AbingoTest < Test::Unit::TestCase
   end
 
   test "conversion tracking by conversion name" do
+    abingo = Abingo.identify
     conversion_name = "purchase"
     tests = %w{conversionTrackingByConversionNameA conversionTrackingByConversionNameB conversionTrackingByConversionNameC}
     tests.map do |test_name|
-      Abingo.test(test_name, %w{A B}, :conversion => conversion_name)
+      abingo.test(test_name, %w{A B}, :conversion => conversion_name)
     end
 
-    Abingo.bingo!(conversion_name)
+    abingo.bingo!(conversion_name)
     tests.map do |test_name|
       assert_equal 1, Abingo::Experiment.find_by_test_name(test_name).conversions
     end
@@ -102,7 +110,8 @@ class AbingoTest < Test::Unit::TestCase
   test "short circuiting works" do
     conversion_name = "purchase"
     test_name = "short circuit test"
-    alt_picked = Abingo.test(test_name, %w{A B}, :conversion => conversion_name)
+    abingo = Abingo.identify
+    alt_picked = abingo.test(test_name, %w{A B}, :conversion => conversion_name)
     ex = Abingo::Experiment.find_by_test_name(test_name)
     alt_not_picked = (%w{A B} - [alt_picked]).first
 
@@ -111,13 +120,11 @@ class AbingoTest < Test::Unit::TestCase
     ex.reload
     assert_equal "Finished", ex.status
 
-    Abingo.bingo!(test_name)  #Should not be counted, test is over.
+    abingo.bingo!(test_name)  #Should not be counted, test is over.
     assert_equal 0, ex.conversions
 
-    old_identity = Abingo.identity
-    Abingo.identity = "shortCircuitTestNewIdentity"
-    Abingo.test(test_name, %w{A B}, :conversion => conversion_name)
-    Abingo.identity = old_identity
+    new_bingo = Abingo.identify("shortCircuitTestNewIdentity")
+    new_bingo.test(test_name, %w{A B}, :conversion => conversion_name)
     ex.reload
     assert_equal 1, ex.participants  #Original identity counted, new identity not counted b/c test stopped
   end
@@ -130,7 +137,8 @@ class AbingoTest < Test::Unit::TestCase
     threads = []
     5.times do
       threads << Thread.new do
-        Abingo.test(test_name, alternatives, :conversion => conversion_name)
+        abingo = Abingo.identify
+        abingo.test(test_name, alternatives, :conversion => conversion_name)
         ActiveRecord::Base.connection.close
       end
     end
@@ -162,23 +170,23 @@ class AbingoTest < Test::Unit::TestCase
     Abingo.options[:count_humans_only] = true
     Abingo.options[:expires_in] = 1.hour
     Abingo.options[:expires_in_for_bots] = 3.seconds
-    first_identity = Abingo.identity = "unsure_if_human#{Time.now.to_i}"
+    first_identity = Abingo.identify("unsure_if_human#{Time.now.to_i}")
     test_name = "are_you_a_human"
-    Abingo.test(test_name, %w{does_not matter})
+    first_identity.test(test_name, %w{does_not matter})
 
-    assert !Abingo.is_human?, "Identity not marked as human yet."
+    assert !first_identity.is_human?, "Identity not marked as human yet."
 
     ex = Abingo::Experiment.find_by_test_name(test_name)
-    Abingo.bingo!(test_name)
+    first_identity.bingo!(test_name)
     assert_equal 0, ex.participants, "Not human yet, so should have no participants."
     assert_equal 0, ex.conversions, "Not human yet, so should have no conversions."
 
-    Abingo.human!
+    first_identity.human!
 
     #Setting up second participant who doesn't convert.
-    Abingo.identity = "unsure_if_human_2_#{Time.now.to_i}"
-    Abingo.test(test_name, %w{does_not matter})
-    Abingo.human!
+    second_identity = Abingo.identify("unsure_if_human_2_#{Time.now.to_i}")
+    second_identity.test(test_name, %w{does_not matter})
+    second_identity.human!
 
     ex = Abingo::Experiment.find_by_test_name(test_name)
     assert_equal 2, ex.participants, "Now that we're human, our participation should matter."
@@ -186,27 +194,27 @@ class AbingoTest < Test::Unit::TestCase
   end
 
   test "Participating tests for a given identity" do
-    Abingo.identity = "test_participant"
+    abingo = Abingo.identify("test_participant")
     test_names = (1..3).map {|t| "participating_test_test_name #{t}"}
     test_alternatives = %w{yes no}
-    test_names.each {|test_name| Abingo.test(test_name, test_alternatives)}
+    test_names.each {|test_name| abingo.test(test_name, test_alternatives)}
     ex = Abingo::Experiment.last
     ex.end_experiment!("no")  #End final of 3 tests, leaving 2 presently running
 
-    assert_equal 2, Abingo.participating_tests.size  #Pairs for two tests
-    Abingo.participating_tests.each do |key, value|
+    assert_equal 2, abingo.participating_tests.size  #Pairs for two tests
+    abingo.participating_tests.each do |key, value|
       assert test_names.include? key
       assert test_alternatives.include? value
     end
 
-    assert_equal 3, Abingo.participating_tests(false).size #pairs for three tests
-    Abingo.participating_tests(false).each do |key, value|
+    assert_equal 3, abingo.participating_tests(false).size #pairs for three tests
+    abingo.participating_tests(false).each do |key, value|
       assert test_names.include? key
       assert test_alternatives.include? value
     end
 
-    Abingo.identity = "test_nonparticipant"
-    assert_equal({}, Abingo.participating_tests)
+    non_participant = Abingo.identify("test_nonparticipant")
+    assert_equal({}, non_participant.participating_tests)
   end
 
 end

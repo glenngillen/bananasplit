@@ -222,20 +222,22 @@ class Abingo
       end
 
       participating_tests.each do |test_name|
-        Alternative.score_participation(test_name)
+        viewed_alternative = find_alternative_for_user(test_name,
+          Abingo::Experiment.alternatives_for_test(test_name))
+        Alternative.score_participation(test_name, viewed_alternative)
         if conversions = Abingo.cache.read("Abingo::conversions(#{self.identity},#{test_name}")
-          conversions.times { Alternative.score_conversion(test_name) }
+          conversions.times { Alternative.score_conversion(test_name, viewed_alternative) }
         end
       end
       true #Marks this user as human in the cache.
     end
   end
 
-  protected
-
   def is_human?
     !!Abingo.cache.read("Abingo::is_human(#{self.identity})")
   end
+
+  protected
 
   #For programmer convenience, we allow you to specify what the alternatives for
   #an experiment are in a few ways.  Thus, we need to actually be able to handle
