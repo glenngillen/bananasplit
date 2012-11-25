@@ -20,6 +20,8 @@ class Abingo
   @@options ||= {}
   cattr_accessor :options
 
+  attr_accessor :identity
+
   #Defined options:
   # :enable_specification  => if true, allow params[test_name] to override the calculated value for a test.
   # :enable_override_in_session => if true, allows session[test_name] to override the calculated value for a test.
@@ -57,16 +59,26 @@ class Abingo
   #always see the same alternative for a particular test which is past the login
   #screen.  For details and usage notes, see the docs.
   def self.identity=(new_identity)
-    @@identity = new_identity.to_s
+    raise RuntimeError.new("Setting identity on the class level has been deprecated. Please create an instance via: @abingo = Abingo.identify('user-id')")
   end
 
-  def self.identity
-    @@identity ||= rand(10 ** 10).to_i.to_s
+  def self.generate_identity
+    rand(10 ** 10).to_i.to_s
+  end
+
+  def self.identify(identity = nil)
+    identity ||= generate_identity
+    new(identity)
+  end
+
+  def initialize(identity)
+    @identity = identity
+    super
   end
 
   #A simple convenience method for doing an A/B test.  Returns true or false.
   #If you pass it a block, it will bind the choice to the variable given to the block.
-  def self.flip(test_name)
+  def flip(test_name)
     if block_given?
       yield(self.test(test_name, [true, false]))
     else
@@ -78,7 +90,7 @@ class Abingo
   #options accepts
   #  :multiple_participation (true or false)
   #  :conversion  name of conversion to listen for  (alias: conversion_name)
-  def self.test(test_name, alternatives, options = {})
+  def test(test_name, alternatives, options = {})
 
     short_circuit = Abingo.cache.read("Abingo::Experiment::short_circuit(#{test_name})".gsub(" ", "_"))
     unless short_circuit.nil?
@@ -130,7 +142,7 @@ class Abingo
     end
   end
 
-  def self.wait_for_lock_release(lock_key)
+  def wait_for_lock_release(lock_key)
     while Abingo.cache.exist?(lock_key)
       sleep(0.1)
     end

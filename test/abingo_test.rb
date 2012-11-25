@@ -144,10 +144,10 @@ class AbingoTest < Test::Unit::TestCase
     threads = []
     alternatives.size.times do |i|
       threads << Thread.new do
-        Abingo.identity = i
-        Abingo.test(test_name, alternatives)
-        sleep(1) if i == 0
-        Abingo.bingo!(test_name)
+        abingo = Abingo.identify(i)
+        abingo.test(test_name, alternatives)
+        abingo.bingo!(test_name)
+        sleep(0.3) if i == 0
         ActiveRecord::Base.connection.close
       end
     end
