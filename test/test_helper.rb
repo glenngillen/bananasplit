@@ -4,13 +4,12 @@
 #require 'rails/all'
 require 'test/unit'
 require 'contest'
-require 'sqlite3'
+require 'pg'
 require 'active_support/cache'
 require 'active_support/cache/memory_store'
 require_relative '../lib/abingo'
 ActiveRecord::Base.establish_connection(
-  :adapter => "sqlite3",
-  :dbfile  => ":memory:",
+  :adapter => "postgresql",
   :database => "abingo-test")
 ActiveRecord::Schema.define do
   create_table "experiments", :force => true do |t|
