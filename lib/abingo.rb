@@ -27,7 +27,7 @@ class Abingo
   # :enable_override_in_session => if true, allows session[test_name] to override the calculated value for a test.
   # :expires_in => if not nil, passes expire_in to creation of per-user cache keys.  Useful for Redis, to prevent expired sessions
   #               from running wild and consuming all of your memory.
-  # :count_humans_only => Count only participation and conversions from humans.  Humans can be identified by calling Abingo.mark_human!
+  # :count_humans_only => Count only participation and conversions from humans.  Humans can be identified by calling @abingo.mark_human!
   #                       This can be done in e.g. Javascript code, which bots will typically not execute.  See FAQ for details.
   # :expires_in_for_bots => if not nil, passes expire_in to creation of per-user cache keys, but only for bots.
   #                         Only matters if :count_humans_only is on.
@@ -51,13 +51,6 @@ class Abingo
     @cache = cache
   end
 
-  #This method gives a unique identity to a user.  It can be absolutely anything
-  #you want, as long as it is consistent.
-  #
-  #We use the identity to determine, deterministically, which alternative a user sees.
-  #This means that if you use Abingo.identify_user on someone at login, they will
-  #always see the same alternative for a particular test which is past the login
-  #screen.  For details and usage notes, see the docs.
   def self.identity=(new_identity)
     raise RuntimeError.new("Setting identity on the class level has been deprecated. Please create an instance via: @abingo = Abingo.identify('user-id')")
   end
@@ -66,6 +59,10 @@ class Abingo
     rand(10 ** 10).to_i.to_s
   end
 
+  #This method identifies a user and ensures they consistently see the same alternative.
+  #This means that if you use Abingo.identify on someone at login, they will
+  #always see the same alternative for a particular test which is past the login
+  #screen.  For details and usage notes, see the docs.
   def self.identify(identity = nil)
     identity ||= generate_identity
     new(identity)
