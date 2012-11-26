@@ -1,5 +1,4 @@
-A/Bingo Version 1.0.3
-======
+# A/Bingo
 
 Rails A/B testing.  One minute to install.  One line to set up a new A/B test.
 One line to track conversion.
@@ -9,48 +8,58 @@ For usage notes, see: http://www.bingocardcreator.com/abingo
 Installation instructions are below usage examples.
 
 Key default features:
-  -- Conversions only tracked once per individual.
-  -- Conversions only tracked if individual saw test.
-  -- Same individual ALWAYS sees same alternative for same test.
-  -- Syntax sugar.  Specify alternatives as a range, array,
-       hash of alternative to weighting, or just let it default to true or false.
-  -- A simple z-test of statistical significance, with output so clear anyone in your organization
-       can understand it.
 
-Example: View
+ * Conversions only tracked once per individual.
+ * Conversions only tracked if individual saw test.
+ * Same individual ALWAYS sees same alternative for same test.
+ * Syntax sugar.  Specify alternatives as a range, array, hash of alternative to weighting, or just let it default to true or false.
+ * A simple z-test of statistical significance, with output so clear anyone in your organization can understand it.
 
+## Example: View
+
+``` erb
 <% ab_test(@abingo_identity, "login_button", ["/images/button1.jpg", "/images/button2.jpg"]) do |button_file| %>
   <%= img_tag(button_file, :alt => "Login!") %>
 <% end %>
+```
 
-Example: Controller
+## Example: Controller
 
+``` ruby
 def register_new_user
   #See what level of free points maximizes users' decision to buy replacement points.
   @starter_points = ab_test(@abingo_identity, "new_user_free_points", [100, 200, 300])
 end
+```
 
-Example: Controller
+## Example: Controller
 
+``` ruby
 def registration
   if (ab_test(@abingo_identity, "send_welcome_email"), :conversion => "purchase")
     #send the email, track to see if it later increases conversion to full version
   end
 end
+```
 
-Example: Conversion tracking (in a controller!)
+## Example: Conversion tracking (in a controller!)
 
+``` ruby
 def buy_new_points
   #some business logic
   @abingo_identity.bingo!("buy_new_points")  #Either a conversion named with :conversion or a test name.
 end
+```
 
-Example: Conversion tracking (in a view)
+## Example: Conversion tracking (in a view)
 
+``` erb
 Thanks for signing up, dude! <% @abingo_identity.bingo!("signup_page_redesign") >
+```
 
-Example: Statistical Significance Testing
+## Example: Statistical Significance Testing
 
+``` irb
 Abingo::Experiment.last.describe_result_in_words
 => "The best alternative you have is: [0], which had 130 conversions from 5000 participants (2.60%).
     The other alternative was [1], which had 1800 conversions from 100000 participants (1.80%).
@@ -58,23 +67,26 @@ Abingo::Experiment.last.describe_result_in_words
     confident that it is the result of your alternatives actually mattering, rather than being due to
     random chance.  However, this doesn't say anything about how much the first alternative is really
     likely to be better by."
+```
 
-Installation
-=======
+## Installation
 
 1)  REQUIRED: You'll need to generate a DB migration to prepare two tables,
 then migrate your database.  (Note: slight edits required if you use the table names
 "experiments" or "alternatives" at present.)  Note: if you are upgrading to A/Bingo 1.0.0, you'll
 want to do this again.
 
+``` shell
 ruby script/generate abingo_migration
 rake db:migrate
+```
 
 2)  REQUIRED: You need to tell A/Bingo a user's identity so that it knows who is
 who if they come back to a test.  (The same identity will ALWAYS see the same
 alternative for the same test.)  How you do this is up to you -- I suggest integrating
 with your login/account infrastructure.  The simplest thing that can possibly work
 
+``` ruby
 #Somewhere in application.rb
 before_filter :set_abingo_identity
 
@@ -86,6 +98,7 @@ def set_abingo_identity
     session[:abingo_identity] = @abingo_identity.identity
   end
 end
+```
 
 3)  RECOMMENDED: A/Bingo makes HEAVY use of the cache to reduce load on the
 database and share potentially long-lived "temporary" data, such as what alternative
@@ -103,8 +116,10 @@ that may not be the worse thing in the world.
 
 A/Bingo defaults to using the same cache store as Rails.  If you want to change it
 
+``` ruby
 #production.rb
 Abingo.cache = ActiveSupport::Cache::MemCacheStore.new("cache.example.com:12345") #best if really memcacheDB
+```
 
 
 Copyright (c) 2009-2010 Patrick McKenzie, released under the MIT license
