@@ -36,7 +36,7 @@ end
 
 ``` ruby
 def registration
-  if (ab_test(@abingo_identity, "send_welcome_email"), :conversion => "purchase")
+  if (ab_test(@abingo_identity, "send_welcome_email", :conversion => "purchase"))
     #send the email, track to see if it later increases conversion to full version
   end
 end
