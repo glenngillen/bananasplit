@@ -70,7 +70,7 @@ class Abingo
 
   def initialize(identity)
     @identity = identity
-    super
+    super()
   end
 
   #A simple convenience method for doing an A/B test.  Returns true or false.
