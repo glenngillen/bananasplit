@@ -16,7 +16,6 @@ module AbingoViewHelper
 
     if block
       content_tag = capture(choice, &block)
-      block_called_from_erb?(block) ? concat(content_tag) : content_tag
     else
       choice
     end
