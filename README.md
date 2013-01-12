@@ -1,4 +1,8 @@
-# A/Bingo
+# Banana Split (originally A/Bingo)
+
+This is a fork of the A/Bingo project. I've specialized requirements and priorities that
+aren't aligned with what Patrick wants with the original source. So I thought it best
+to rename to avoid any confusion.
 
 Rails A/B testing.  One minute to install.  One line to set up a new A/B test.
 One line to track conversion.
