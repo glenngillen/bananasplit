@@ -3,12 +3,12 @@
 #
 #See abingo.rb for descriptions of what these do.
 
-module AbingoSugar
+module BananaSplitSugar
 
   def ab_test(abingo, test_name, alternatives = nil, options = {})
-    if (Abingo.options[:enable_specification] && !params[test_name].nil?)
+    if (BananaSplit.options[:enable_specification] && !params[test_name].nil?)
       choice = params[test_name]
-    elsif (Abingo.options[:enable_override_in_session] && !session[test_name].nil?)
+    elsif (BananaSplit.options[:enable_override_in_session] && !session[test_name].nil?)
       choice = session[test_name]
     elsif (alternatives.nil?)
       choice = abingo.flip(test_name)

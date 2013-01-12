@@ -1,12 +1,12 @@
 #Gives you easy syntax to use ABingo in your views.
 
-module AbingoViewHelper
+module BananaSplitViewHelper
 
   def ab_test(abingo, test_name, alternatives = nil, options = {}, &block)
 
-    if (Abingo.options[:enable_specification] && !params[test_name].nil?)
+    if (BananaSplit.options[:enable_specification] && !params[test_name].nil?)
       choice = params[test_name]
-    elsif (Abingo.options[:enable_override_in_session] && !session[test_name].nil?)
+    elsif (BananaSplit.options[:enable_override_in_session] && !session[test_name].nil?)
       choice = session[test_name]
     elsif (alternatives.nil?)
       choice = abingo.flip(test_name)
@@ -26,8 +26,8 @@ module AbingoViewHelper
     abingo.bingo!(test_name, options)
   end
 
-  #This causes an AJAX post against the URL.  That URL should call Abingo.human!
-  #This guarantees that anyone calling Abingo.human! is capable of at least minimal Javascript execution, and thus is (probably) not a robot.
+  #This causes an AJAX post against the URL.  That URL should call BananaSplit.human!
+  #This guarantees that anyone calling BananaSplit.human! is capable of at least minimal Javascript execution, and thus is (probably) not a robot.
   def include_humanizing_javascript(url = "/abingo_mark_human", style = :prototype)
     script = nil
     if (style == :prototype)

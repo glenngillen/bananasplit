@@ -1,4 +1,4 @@
-module Abingo::ConversionRate
+module BananaSplit::ConversionRate
   def conversion_rate
     1.0 * conversions / participants
   end

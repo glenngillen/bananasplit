@@ -1,14 +1,14 @@
 require "active_record"
-require "abingo/conversion_rate"
-class Abingo::Alternative < ActiveRecord::Base
-  include Abingo::ConversionRate
+require_relative "conversion_rate"
+class BananaSplit::Alternative < ActiveRecord::Base
+  include BananaSplit::ConversionRate
 
-  belongs_to :experiment, :class_name => "Abingo::Experiment"
+  belongs_to :experiment, :class_name => "BananaSplit::Experiment"
   attr_accessible :content, :weight, :lookup
   serialize :content
 
   def self.calculate_lookup(test_name, alternative_name)
-    Digest::MD5.hexdigest(Abingo.salt + test_name + alternative_name.to_s)
+    Digest::MD5.hexdigest(BananaSplit.salt + test_name + alternative_name.to_s)
   end
 
   def self.score_conversion(test_name, viewed_alternative)

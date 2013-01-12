@@ -1,19 +1,19 @@
-require "abingo/version"
-require "#{File.dirname(__FILE__)}/abingo_sugar"
-require "#{File.dirname(__FILE__)}/abingo_view_helper"
-require "abingo/controller/dashboard"
-require "abingo/rails/controller/dashboard"
-require "abingo/alternative"
-require "abingo/experiment"
-require "#{File.dirname(__FILE__)}/../generators/abingo_migration/abingo_migration_generator.rb"
-ActionController::Base.send :include, AbingoSugar
-ActionView::Base.send :include, AbingoViewHelper
+require_relative "bananasplit/version"
+require_relative "bananasplit_sugar"
+require_relative "bananasplit_view_helper"
+require_relative "bananasplit/controller/dashboard"
+require_relative "bananasplit/rails/controller/dashboard"
+require_relative "bananasplit/alternative"
+require_relative "bananasplit/experiment"
+require_relative "../generators/bananasplit_migration/bananasplit_migration_generator.rb"
+ActionController::Base.send :include, BananaSplitSugar
+ActionView::Base.send :include, BananaSplitViewHelper
 #This class is outside code's main interface into the ABingo A/B testing framework.
 #Unless you're fiddling with implementation details, it is the only one you need worry about.
 
 #Usage of ABingo, including practical hints, is covered at http://www.bingocardcreator.com/abingo
 
-class Abingo
+class BananaSplit
   cattr_accessor :salt
   @@salt = "Not really necessary."
 
@@ -40,7 +40,7 @@ class Abingo
   #look into memcachedb, which speaks the memcached protocol.  From the perspective
   #of Rails it is just another MemcachedStore.
   #
-  #You can overwrite Abingo's cache instance, if you would like it to not share
+  #You can overwrite BananaSplit's cache instance, if you would like it to not share
   #your generic Rails cache.
 
   def self.cache
@@ -52,7 +52,7 @@ class Abingo
   end
 
   def self.identity=(new_identity)
-    raise RuntimeError.new("Setting identity on the class level has been deprecated. Please create an instance via: @abingo = Abingo.identify('user-id')")
+    raise RuntimeError.new("Setting identity on the class level has been deprecated. Please create an instance via: @abingo = BananaSplit.identify('user-id')")
   end
 
   def self.generate_identity
@@ -60,7 +60,7 @@ class Abingo
   end
 
   #This method identifies a user and ensures they consistently see the same alternative.
-  #This means that if you use Abingo.identify on someone at login, they will
+  #This means that if you use BananaSplit.identify on someone at login, they will
   #always see the same alternative for a particular test which is past the login
   #screen.  For details and usage notes, see the docs.
   def self.identify(identity = nil)
@@ -89,46 +89,46 @@ class Abingo
   #  :conversion  name of conversion to listen for  (alias: conversion_name)
   def test(test_name, alternatives, options = {})
 
-    short_circuit = Abingo.cache.read("Abingo::Experiment::short_circuit(#{test_name})".gsub(" ", "_"))
+    short_circuit = BananaSplit.cache.read("BananaSplit::Experiment::short_circuit(#{test_name})".gsub(" ", "_"))
     unless short_circuit.nil?
       return short_circuit  #Test has been stopped, pick canonical alternative.
     end
 
-    unless Abingo::Experiment.exists?(test_name)
-      lock_key = "Abingo::lock_for_creation(#{test_name.gsub(" ", "_")})"
+    unless BananaSplit::Experiment.exists?(test_name)
+      lock_key = "BananaSplit::lock_for_creation(#{test_name.gsub(" ", "_")})"
       lock_id  = SecureRandom.hex
       #this prevents (most) repeated creations of experiments in high concurrency environments.
-      if Abingo.cache.exist?(lock_key)
+      if BananaSplit.cache.exist?(lock_key)
         wait_for_lock_release(lock_key)
       else
-        Abingo.cache.write(lock_key, lock_id, :expires_in => 5.seconds)
+        BananaSplit.cache.write(lock_key, lock_id, :expires_in => 5.seconds)
         sleep(0.1)
-        if Abingo.cache.read(lock_key) == lock_id
+        if BananaSplit.cache.read(lock_key) == lock_id
           conversion_name = options[:conversion] || options[:conversion_name]
-          Abingo::Experiment.start_experiment!(test_name, Abingo.parse_alternatives(alternatives), conversion_name)
+          BananaSplit::Experiment.start_experiment!(test_name, BananaSplit.parse_alternatives(alternatives), conversion_name)
         else
           wait_for_lock_release(lock_key)
         end
       end
-      Abingo.cache.delete(lock_key)
+      BananaSplit.cache.delete(lock_key)
     end
 
     choice = self.find_alternative_for_user(test_name, alternatives)
-    participating_tests = Abingo.cache.read("Abingo::participating_tests::#{self.identity}") || []
+    participating_tests = BananaSplit.cache.read("BananaSplit::participating_tests::#{self.identity}") || []
 
     #Set this user to participate in this experiment, and increment participants count.
     if options[:multiple_participation] || !(participating_tests.include?(test_name))
       unless participating_tests.include?(test_name)
         participating_tests = participating_tests + [test_name]
         if self.expires_in
-          Abingo.cache.write("Abingo::participating_tests::#{self.identity}", participating_tests, {:expires_in => self.expires_in})
+          BananaSplit.cache.write("BananaSplit::participating_tests::#{self.identity}", participating_tests, {:expires_in => self.expires_in})
         else
-          Abingo.cache.write("Abingo::participating_tests::#{self.identity}", participating_tests)
+          BananaSplit.cache.write("BananaSplit::participating_tests::#{self.identity}", participating_tests)
         end
       end
       #If we're only counting known humans, then postpone scoring participation until after we know the user is human.
       if (!@@options[:count_humans_only] || self.is_human?)
-        Abingo::Alternative.score_participation(test_name, choice)
+        BananaSplit::Alternative.score_participation(test_name, choice)
       end
     end
 
@@ -140,7 +140,7 @@ class Abingo
   end
 
   def wait_for_lock_release(lock_key)
-    while Abingo.cache.exist?(lock_key)
+    while BananaSplit.cache.exist?(lock_key)
       sleep(0.1)
     end
   end
@@ -164,13 +164,13 @@ class Abingo
     else
       if name.nil?
         #Score all participating tests
-        participating_tests = Abingo.cache.read("Abingo::participating_tests::#{self.identity}") || []
+        participating_tests = BananaSplit.cache.read("BananaSplit::participating_tests::#{self.identity}") || []
         participating_tests.each do |participating_test|
           self.bingo!(participating_test, options)
         end
       else #Could be a test name or conversion name.
         conversion_name = name.gsub(" ", "_")
-        tests_listening_to_conversion = Abingo.cache.read("Abingo::tests_listening_to_conversion#{conversion_name}")
+        tests_listening_to_conversion = BananaSplit.cache.read("BananaSplit::tests_listening_to_conversion#{conversion_name}")
         if tests_listening_to_conversion
           if tests_listening_to_conversion.size > 1
             tests_listening_to_conversion.map do |individual_test|
@@ -190,16 +190,16 @@ class Abingo
   end
 
   def participating_tests(only_current = true)
-    participating_tests = Abingo.cache.read("Abingo::participating_tests::#{identity}") || []
+    participating_tests = BananaSplit.cache.read("BananaSplit::participating_tests::#{identity}") || []
     tests_and_alternatives = participating_tests.inject({}) do |acc, test_name|
-      alternatives_key = "Abingo::Experiment::#{test_name}::alternatives".gsub(" ","_")
-      alternatives = Abingo.cache.read(alternatives_key)
+      alternatives_key = "BananaSplit::Experiment::#{test_name}::alternatives".gsub(" ","_")
+      alternatives = BananaSplit.cache.read(alternatives_key)
       acc[test_name] = find_alternative_for_user(test_name, alternatives)
       acc
     end
     if (only_current)
       tests_and_alternatives.reject! do |key, value|
-        Abingo.cache.read("Abingo::Experiment::short_circuit(#{key})")
+        BananaSplit.cache.read("BananaSplit::Experiment::short_circuit(#{key})")
       end
     end
     tests_and_alternatives
@@ -207,22 +207,22 @@ class Abingo
 
   #Marks that this user is human.
   def human!
-    Abingo.cache.fetch("Abingo::is_human(#{self.identity})",  {:expires_in => self.expires_in(true)}) do
+    BananaSplit.cache.fetch("BananaSplit::is_human(#{self.identity})",  {:expires_in => self.expires_in(true)}) do
       #Now that we know the user is human, score participation for all their tests.  (Further participation will *not* be lazy evaluated.)
 
       #Score all tests which have been deferred.
-      participating_tests = Abingo.cache.read("Abingo::participating_tests::#{self.identity}") || []
+      participating_tests = BananaSplit.cache.read("BananaSplit::participating_tests::#{self.identity}") || []
 
       #Refresh cache expiry for this user to match that of known humans.
       if (@@options[:expires_in_for_bots] && !participating_tests.blank?)
-        Abingo.cache.write("Abingo::participating_tests::#{self.identity}", participating_tests, {:expires_in => self.expires_in(true)})
+        BananaSplit.cache.write("BananaSplit::participating_tests::#{self.identity}", participating_tests, {:expires_in => self.expires_in(true)})
       end
 
       participating_tests.each do |test_name|
         viewed_alternative = find_alternative_for_user(test_name,
-          Abingo::Experiment.alternatives_for_test(test_name))
+          BananaSplit::Experiment.alternatives_for_test(test_name))
         Alternative.score_participation(test_name, viewed_alternative)
-        if conversions = Abingo.cache.read("Abingo::conversions(#{self.identity},#{test_name}")
+        if conversions = BananaSplit.cache.read("BananaSplit::conversions(#{self.identity},#{test_name}")
           conversions.times { Alternative.score_conversion(test_name, viewed_alternative) }
         end
       end
@@ -231,7 +231,7 @@ class Abingo
   end
 
   def is_human?
-    !!Abingo.cache.read("Abingo::is_human(#{self.identity})")
+    !!BananaSplit.cache.read("BananaSplit::is_human(#{self.identity})")
   end
 
   protected
@@ -271,15 +271,15 @@ class Abingo
   end
 
   def self.retrieve_alternatives(test_name, alternatives)
-    cache_key = "Abingo::Experiment::#{test_name}::alternatives".gsub(" ","_")
-    alternative_array = Abingo.cache.fetch(cache_key) do
-      Abingo.parse_alternatives(alternatives)
+    cache_key = "BananaSplit::Experiment::#{test_name}::alternatives".gsub(" ","_")
+    alternative_array = BananaSplit.cache.fetch(cache_key) do
+      BananaSplit.parse_alternatives(alternatives)
     end
     alternative_array
   end
 
   def find_alternative_for_user(test_name, alternatives)
-    alternatives_array = Abingo.retrieve_alternatives(test_name, alternatives)
+    alternatives_array = BananaSplit.retrieve_alternatives(test_name, alternatives)
     alternatives_array[self.modulo_choice(test_name, alternatives_array.size)]
   end
 
@@ -287,25 +287,25 @@ class Abingo
   #and their identity, we hash them together (which, for MD5, provably introduces
   #enough entropy that we don't care) otherwise
   def modulo_choice(test_name, choices_count)
-    Digest::MD5.hexdigest(Abingo.salt.to_s + test_name + self.identity.to_s).to_i(16) % choices_count
+    Digest::MD5.hexdigest(BananaSplit.salt.to_s + test_name + self.identity.to_s).to_i(16) % choices_count
   end
 
   def score_conversion!(test_name)
     test_name.gsub!(" ", "_")
-    participating_tests = Abingo.cache.read("Abingo::participating_tests::#{self.identity}") || []
+    participating_tests = BananaSplit.cache.read("BananaSplit::participating_tests::#{self.identity}") || []
     if options[:assume_participation] || participating_tests.include?(test_name)
-      cache_key = "Abingo::conversions(#{self.identity},#{test_name}"
-      if options[:multiple_conversions] || !Abingo.cache.read(cache_key)
+      cache_key = "BananaSplit::conversions(#{self.identity},#{test_name}"
+      if options[:multiple_conversions] || !BananaSplit.cache.read(cache_key)
         if !options[:count_humans_only] || is_human?
           viewed_alternative = find_alternative_for_user(test_name,
-            Abingo::Experiment.alternatives_for_test(test_name))
-          Abingo::Alternative.score_conversion(test_name, viewed_alternative)
+            BananaSplit::Experiment.alternatives_for_test(test_name))
+          BananaSplit::Alternative.score_conversion(test_name, viewed_alternative)
         end
 
-        if Abingo.cache.exist?(cache_key)
-          Abingo.cache.increment(cache_key)
+        if BananaSplit.cache.exist?(cache_key)
+          BananaSplit.cache.increment(cache_key)
         else
-          Abingo.cache.write(cache_key, 1)
+          BananaSplit.cache.write(cache_key, 1)
         end
       end
     end
