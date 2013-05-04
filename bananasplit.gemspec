@@ -4,8 +4,8 @@ require File.expand_path('../lib/bananasplit/version', __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = ["Glenn Gillen"]
   gem.email         = ["me@glenngillen.com"]
-  gem.description   = %q{A split testing framework for Rails 3.x.x}
-  gem.summary       = %q{The ABingo split testing framework for Rails 3.x.x from Patrick McKenzie}
+  gem.description   = %q{A split testing framework for Rack apps}
+  gem.summary       = %q{Split testing framework for ruby/rack application}
   gem.homepage      = "https://github.com/glenngillen/bananasplit"
 
   gem.files         = `git ls-files`.split($\)
@@ -15,6 +15,5 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
   gem.version       = BananaSplit::VERSION
 
-  gem.add_dependency "rails", "~> 3.0"
   gem.add_development_dependency "rake", "0.8.7"
 end
