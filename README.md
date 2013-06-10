@@ -64,7 +64,7 @@ Thanks for signing up, dude! <% @abingo_identity.bingo!("signup_page_redesign") 
 ## Example: Statistical Significance Testing
 
 ``` irb
-Abingo::Experiment.last.describe_result_in_words
+BananaSplit::Experiment.last.describe_result_in_words
 => "The best alternative you have is: [0], which had 130 conversions from 5000 participants (2.60%).
     The other alternative was [1], which had 1800 conversions from 100000 participants (1.80%).
     This difference is 99.9% likely to be statistically significant, which means you can be extremely
@@ -122,7 +122,7 @@ A/Bingo defaults to using the same cache store as Rails.  If you want to change 
 
 ``` ruby
 #production.rb
-Abingo.cache = ActiveSupport::Cache::MemCacheStore.new("cache.example.com:12345") #best if really memcacheDB
+BananaSplit.cache = ActiveSupport::Cache::MemCacheStore.new("cache.example.com:12345") #best if really memcacheDB
 ```
 
 
