@@ -1,10 +1,10 @@
-class Abingo
+class BananaSplit
   module Rails
     module Controller
       module Dashboard
 
         def index
-          @experiments = Abingo::Experiment.all
+          @experiments = BananaSplit::Experiment.all
         end
 
       end

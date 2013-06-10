@@ -1,5 +1,5 @@
 <h3><%= experiment.test_name.titleize %> <%= %Q|<i>(Test completed)</i>| if experiment.status != "Live" %> </h3>
-<% short_circuit = Abingo.cache.read("Abingo::Experiment::short_circuit(#{experiment.test_name})".gsub(" ", "")) %>
+<% short_circuit = BananaSplit.cache.read("BananaSplit::Experiment::short_circuit(#{experiment.test_name})".gsub(" ", "")) %>
 <table class="experiment" style="border: 1px black;">
   <tr class="header_row">
     <th>Name</th>
