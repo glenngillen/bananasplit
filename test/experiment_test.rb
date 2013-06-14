@@ -1,12 +1,22 @@
-require 'minitest/autorun'
-class ExperimentTest < MiniTest::Test
+require_relative "helper"
+require_relative "../lib/bananasplit/experiment"
+class ExperimentTest < Minitest::Unit::TestCase
   def setup
+    @experiment = BananaSplit::Experiment.new(
+      name: "My test experiment",
+      alternatives: ["a","b","c"]
+    )
+    assert @experiment.valid?
   end
 
   def test_has_a_name
+    @experiment.name = nil
+    refute @experiment.valid?
   end
 
-  def test_has_variants
+  def test_has_alternatives
+    @experiment.alternatives = nil
+    refute @experiment.valid?
   end
 
   def test_has_a_minimum_effect_required
@@ -30,6 +40,5 @@ class ExperimentTest < MiniTest::Test
 
   def test_calculates_significance_once_complete
   end
-
 
 end

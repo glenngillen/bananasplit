@@ -1,8 +1,8 @@
 require 'test/unit'
 require 'contest'
 require 'pg'
-require 'active_support/cache'
-require 'active_support/cache/memory_store'
+#require 'active_support/cache'
+#require 'active_support/cache/memory_store'
 require_relative '../lib/bananasplit'
 ActiveRecord::Base.establish_connection(
   :adapter => "postgresql",
