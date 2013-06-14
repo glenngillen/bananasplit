@@ -5,6 +5,7 @@ Sequel.migration do
       DateTime :created_at, null: false
       DateTime :updated_at, null: false
       String :name, null: false
+      Float  :min_relative_effect, null: false
       index :name, unique: true
     end
   end

@@ -1,6 +1,7 @@
 #require_relative "statistics"
 #require_relative "conversion_rate"
 require "sequel"
+Sequel::Model.raise_on_typecast_failure = false
 class BananaSplit::Experiment < Sequel::Model(Sequel.connect(ENV["DATABASE_URL"]))
   def validate
     super

@@ -3,8 +3,7 @@ require_relative "../lib/bananasplit/experiment"
 class ExperimentTest < Minitest::Unit::TestCase
   def setup
     @experiment = BananaSplit::Experiment.new(
-      name: "My test experiment",
-      alternatives: ["a","b","c"]
+      name: "My test experiment"
     )
     assert @experiment.valid?
   end
@@ -14,12 +13,14 @@ class ExperimentTest < Minitest::Unit::TestCase
     refute @experiment.valid?
   end
 
-  def test_has_alternatives
-    @experiment.alternatives = nil
+  def test_has_a_minimum_relative_effect_required
+    @experiment.min_relative_effect = nil
     refute @experiment.valid?
   end
 
-  def test_has_a_minimum_effect_required
+  def test_has_alternatives
+  #  @experiment.alternatives = nil
+  #  refute @experiment.valid?
   end
 
   def test_calculates_requied_sample_size
