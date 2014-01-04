@@ -127,3 +127,5 @@ BananaSplit.cache = ActiveSupport::Cache::MemCacheStore.new("cache.example.com:1
 
 
 Copyright (c) 2009-2010 Patrick McKenzie, released under the MIT license
+
+[![Analytics](https://ga-beacon.appspot.com/UA-46840117-1/bananasplit/readme?pixel)](https://github.com/igrigorik/ga-beacon)
