@@ -15,6 +15,6 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
   gem.version       = BananaSplit::VERSION
 
-  gem.add_dependency "rails", "~> 3.0"
+  gem.add_dependency "rails", "~> 4.0"
   gem.add_development_dependency "rake", "0.8.7"
 end
