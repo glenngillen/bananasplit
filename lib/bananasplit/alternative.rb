@@ -12,11 +12,11 @@ class BananaSplit::Alternative < ActiveRecord::Base
   end
 
   def self.score_conversion(test_name, viewed_alternative)
-    self.update_all("conversions = conversions + 1", :lookup => self.calculate_lookup(test_name, viewed_alternative))
+    self.where(lookup: self.calculate_lookup(test_name, viewed_alternative)).update_all("conversions = conversions + 1")
   end
 
   def self.score_participation(test_name, viewed_alternative)
-    self.update_all("participants = participants + 1", :lookup => self.calculate_lookup(test_name, viewed_alternative))
+    self.where(lookup: self.calculate_lookup(test_name, viewed_alternative)).update_all("participants = participants + 1")
   end
 
 end
