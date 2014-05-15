@@ -40,7 +40,7 @@ class BananaSplit::Experiment < ActiveRecord::Base
   def self.exists?(test_name)
     cache_key = "BananaSplit::Experiment::exists(#{test_name})".gsub(" ", "_")
     ret = BananaSplit.cache.fetch(cache_key) do
-      count = BananaSplit::Experiment.count(:conditions => {:test_name => test_name})
+      count = BananaSplit::Experiment.where(test_name: test_name).count
       count > 0 ? count : nil
     end
     (!ret.nil?)
@@ -66,7 +66,7 @@ class BananaSplit::Experiment < ActiveRecord::Base
     conversion_name.gsub!(" ", "_")
     cloned_alternatives_array = alternatives_array.clone
     ActiveRecord::Base.transaction do
-      experiment = BananaSplit::Experiment.find_or_create_by_test_name(test_name)
+      experiment = BananaSplit::Experiment.find_or_create_by(test_name: test_name)
       experiment.alternatives.destroy_all  #Blows away alternatives for pre-existing experiments.
       while (cloned_alternatives_array.size > 0)
         alt = cloned_alternatives_array[0]
